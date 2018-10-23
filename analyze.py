@@ -65,8 +65,17 @@ class extract_m1:
 
 
 if __name__ == '__main__':
-    extract = extract_m1()
+    # initializing class for analyzing with following bin parameters:
+    # range of kinetic energy (0, 20> with 1 step [eV]
+    # range of depht (-80, -10> with step 10
+    extract = extract_m1(ke_range=[0,20], ke_step=1, z_range=[-80,-10], z_step=10)
+
+    # loading preprocessed MD data
     extract.load('data/100ek_90deg.pickle')
+
+    # displaying results as heatmap
     extract.show_hmap()
+
+    # geting results as matrix for proper analyze
     m1_matrix, row_labels, column_labels = extract.calc_vmatrix()
 

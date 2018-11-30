@@ -60,22 +60,43 @@ class extract_m1:
         m1_val, row_labels, column_labels = self.calc_vmatrix()
 
         fix, ax1 = plt.subplots(1,1)
-        ax1.imshow(m1_val, cmap='hot', vmin=0)
-        plt.show()
+        img = ax1.imshow(m1_val, cmap='hot', vmin=0)
 
+        row_map_dict = dict(zip(range(len(row_labels)), row_labels))
+        def row_mapper(val, n):
+            val = int(val)
+            if val in row_map_dict:
+                return row_map_dict[val]
+            return 'na'
+        ax1.xaxis.set_major_formatter(plt.FuncFormatter(row_mapper))
+        ax1.set_xlabel("Recoil peak kinetic energy [eV]")
+
+        col_map_dict = dict(zip(range(len(column_labels)), column_labels))
+        def column_mapper(val, n):
+            val = int(val)
+            if val in col_map_dict:
+                return col_map_dict[val]
+            return 'na'
+
+        ax1.yaxis.set_major_formatter(plt.FuncFormatter(column_mapper))
+        ax1.set_ylabel("Recoil initial z position [A]")
+
+        cbar = plt.colorbar(img)
+        cbar.set_label("Average displacement x-axis [A]")
+        plt.show()
 
 if __name__ == '__main__':
     # initializing class for analyzing with following bin parameters:
     # range of kinetic energy (0, 20> with 1 step [eV]
     # range of depht (-80, -10> with step 10
-    extract = extract_m1(ke_range=[0,20], ke_step=1, z_range=[-80,-10], z_step=10)
+    extract = extract_m1(ke_range=[0,80], ke_step=2, z_range=[-70,-40], z_step=1)
 
     # loading preprocessed MD data
-    extract.load('data/100ek_90deg.pickle')
+    extract.load('data/100ek_90deg_-60A_-50A.pickle')
 
     # displaying results as heatmap
-    extract.show_hmap()
+    a = extract.show_hmap()
 
     # geting results as matrix for proper analyze
-    m1_matrix, row_labels, column_labels = extract.calc_vmatrix()
+    #m1_matrix, row_labels, column_labels = extract.calc_vmatrix()
 

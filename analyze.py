@@ -3,11 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class extract_m1:
-    def __init__(self, ke_range=[0,100], ke_step=1, z_range=[-60,-20], z_step=5):
+    def __init__(self, pfile, ke_range=[0,100], ke_step=1, z_range=None, z_step=5):
         # range=(0,6), step=2  // |-bin edge, *-bin center
         #    |...*...|...*...|...*...|
         #    0   1   2   3   4   5   6
         # 0      1       2       3       4 // bin indexes / discard 0, 4
+
+        self.load(pfile)
 
         self.ke_range = ke_range
 
@@ -16,23 +18,30 @@ class extract_m1:
         self.ke_bin_centers[0] = np.nan
         self.ke_bin_centers = np.append(self.ke_bin_centers, np.nan)
 
-        self.z_range = z_range
+        if z_range is not None:
+            self.z_range = z_range
+        else:
+            center = int(np.round(np.mean(self.z)))
+            self.z_range = [center-15, center+15]
 
-        self.z_bin_edges = np.arange(z_range[0], z_range[1]+10e-6, z_step)
+        self.z_bin_edges = np.arange(self.z_range[0], self.z_range[1]+10e-6, z_step)
         self.z_bin_centers = self.z_bin_edges - 0.5*z_step
         self.z_bin_centers[0] = np.nan
         self.z_bin_centers = np.append(self.z_bin_centers, np.nan)
+
+        self.ke_ind = np.digitize(self.ke, self.ke_bin_edges, right=True)
+        self.z_ind = np.digitize(self.z, self.z_bin_edges, right=True)
 
     def load(self, pfile):
         with open(pfile, 'rb') as f:
             # [ ke, dx, z ]
             self.data = pickle.load(f)
+        self.file_name = pfile.split("/")[-1]
         self.ke = self.data[0]
         self.dx = self.data[1]
         self.z = self.data[2]
-
-        self.ke_ind = np.digitize(self.ke, self.ke_bin_edges, right=True)
-        self.z_ind = np.digitize(self.z, self.z_bin_edges, right=True)
+        self.sim_cnt = self.data[3]
+        print("Total number of simulations: {}".format(self.sim_cnt))
 
     def calc_vmatrix(self):
         m1_val_ext = np.zeros((len(self.z_bin_centers), len(self.ke_bin_centers)), dtype=float)
@@ -56,10 +65,12 @@ class extract_m1:
 
         return m1_val, row_labels, column_labels
 
-    def show_hmap(self):
+    def show_hmap(self, saveimg=None):
         m1_val, row_labels, column_labels = self.calc_vmatrix()
 
-        fix, ax1 = plt.subplots(1,1)
+        fig, ax1 = plt.subplots(1,1)
+        fig.suptitle("File: {} , num os simulations: {}".format(
+            self.file_name, self.sim_cnt))
         img = ax1.imshow(m1_val, cmap='hot', vmin=0)
 
         row_map_dict = dict(zip(range(len(row_labels)), row_labels))
@@ -83,16 +94,17 @@ class extract_m1:
 
         cbar = plt.colorbar(img)
         cbar.set_label("Average displacement x-axis [A]")
-        plt.show()
+
+        if saveimg is not None:
+            plt.savefig(saveimg)
+        else:
+            plt.show()
 
 if __name__ == '__main__':
     # initializing class for analyzing with following bin parameters:
     # range of kinetic energy (0, 20> with 1 step [eV]
     # range of depht (-80, -10> with step 10
-    extract = extract_m1(ke_range=[0,80], ke_step=2, z_range=[-70,-40], z_step=1)
-
-    # loading preprocessed MD data
-    extract.load('data/100ek_90deg_-60A_-50A.pickle')
+    extract = extract_m1("data/100ek_90deg__-5_0.pickle", ke_range=[0,80], ke_step=4, z_step=1)
 
     # displaying results as heatmap
     a = extract.show_hmap()

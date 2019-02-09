@@ -116,7 +116,7 @@ def extract_sim(simdir, masterfile):
     dx_list = []
     z_list = []
 
-
+    sim_cnt = 0
     for simfile in simfiles:
         print("Processing: {}".format(simfile))
         simfile = "{}/{}".format(simdir, simfile)
@@ -127,9 +127,12 @@ def extract_sim(simdir, masterfile):
         dx_list.append(x[:,-1])
         z_list.append(z)
 
+        sim_cnt += 1
+
     final = [np.concatenate(ek_list),
              np.concatenate(dx_list),
-             np.concatenate(z_list)]
+             np.concatenate(z_list),
+             sim_cnt]
 
     return final
 
@@ -137,7 +140,16 @@ def extract_sim(simdir, masterfile):
 #d, simlen = extract_dict('ek_100_theta_90_z_-43.8942676673338_id_30722.lammpstrj', master_dict)
 #ek, x, z = expand_dict(d, simlen)
 
-#mek = np.max(ek, axis=1)
-#dx = x[:,-1]
-final = extract_sim('100ek_60-50', 'master_sample_hobler_50-60.lammpstrj')
-pickle.dump(final, open('100ek_90deg_-60A_-50A.pickle', 'wb'))
+base_dir = "100ek_raw"
+
+targets = ["{}/{}".format(base_dir, ldir) for ldir in os.listdir(base_dir)]
+print(targets)
+
+name_prefix = "100ek_90deg"
+for target in targets:
+    final = extract_sim(target, 'master_sample_hobler_50-60.lammpstrj')
+
+    slice_name = target.split("/")[-1]
+    name = "{}_{}.pickle".format(name_prefix, slice_name)
+    out_file = "{}/{}".format("data", name)
+    pickle.dump(final, open(out_file, 'wb'))

@@ -113,16 +113,17 @@ class extract_m1:
         else:
             plt.show()
 
-    def show_1d_distrib(self, saveimg=None):
+    def show_1d_distrib(self, compareto=None, saveimg=None):
         if not self.calc_mom:
             sys.exit("Cannot construct histogram of average displacement.")
         m1_val, row_labels, column_labels = self.calc_vmatrix()
         m1_val = np.sum(m1_val, axis=0)
+        m1_sum = np.sum(m1_val)
+        print 'm1=', m1_sum
 
         fig, ax1 = plt.subplots(1,1)
-        fig.suptitle("File: {} , num of simulations: {}".format(
-            self.file_name, self.sim_cnt))
-        ax1.plot(m1_val)
+        label = "{} (M1={:.1f})".format(self.file_name, m1_sum)
+        ax1.plot(m1_val, label=label)
 
         row_map_dict = dict(zip(range(len(row_labels)), row_labels))
         def row_mapper(val, n):
@@ -136,6 +137,17 @@ class extract_m1:
         ax1.set_ylim(0, self.vmax)
         ax1.set_ylabel("Contribution to first moment [A]")
 
+        # compare to other data
+        if compareto is not None:
+            m1_val, row_labels, column_labels = compareto.calc_vmatrix()
+            m1_val = np.sum(m1_val, axis=0)
+            m1_sum = np.sum(m1_val)
+            label = "{} (M1={:.1f})".format(compareto.file_name, m1_sum)
+            ax1.plot(m1_val, '--', label=label)
+            print 'm1=', m1_sum
+
+        ax1.legend(loc='best')
+        
         if saveimg is not None:
             plt.savefig(saveimg)
         else:
@@ -146,12 +158,16 @@ if __name__ == '__main__':
     # initializing class for analyzing with following bin parameters:
     # range of kinetic energy (0, 20> with 1 step [eV]
     # range of depth (-80, -10> with step 10
-    extract = extract_m1("data/100ek_90deg__-55_-50.pickle", ke_range=[0,80], 
-                         ke_step=4, z_step=1, calc_mom=True, vmax=5)
+#    "data_30cut/100ek_90deg_cut__-5_0.pickle"
+    extract = extract_m1("data/100ek_90deg__-15_-10.pickle", ke_range=[0,80], 
+                         ke_step=4, z_step=1, calc_mom=True, vmax=None)
+    extract2 = extract_m1("data_relax/100ek_relax__-15_-10.pickle",
+                          ke_range=[0,80], 
+                          ke_step=4, z_step=1, calc_mom=True, vmax=None)
 
     # displaying results as heatmap
 #    a = extract.show_hmap()
-    extract.show_1d_distrib()
+    extract.show_1d_distrib(extract2)
 
     # getting results as matrix for proper analyze
     #m1_matrix, row_labels, column_labels = extract.calc_vmatrix()

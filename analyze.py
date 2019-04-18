@@ -48,7 +48,7 @@ class extract_m1:
         self.z = self.data[2]
         self.sim_cnt = self.data[3]
         print("Total number of simulations: {}".format(self.sim_cnt))
-
+        
     def calc_vmatrix(self):
         m1_val_ext = np.zeros((len(self.z_bin_centers),
                                len(self.ke_bin_centers)), dtype=float)
@@ -159,11 +159,16 @@ if __name__ == '__main__':
     # range of kinetic energy (0, 20> with 1 step [eV]
     # range of depth (-80, -10> with step 10
 #    "data_30cut/100ek_90deg_cut__-5_0.pickle"
-    extract = extract_m1("data/100ek_90deg__-15_-10.pickle", ke_range=[0,80], 
-                         ke_step=4, z_step=1, calc_mom=True, vmax=None)
-    extract2 = extract_m1("data_relax/100ek_relax__-15_-10.pickle",
-                          ke_range=[0,80], 
-                          ke_step=4, z_step=1, calc_mom=True, vmax=None)
+#    extract = extract_m1("data_relax/100ek_relax__-15_-10.pickle", ke_range=[0,80], 
+    extract = extract_m1("data/100ek_90deg__-15_-10.pickle", 
+                         ke_range=[0,120], ke_step=4, z_step=1, 
+                         calc_mom=True, vmax=None)
+    extract2 = extract_m1("data_relax/100ek_relax__-15_-10.pickle", 
+                          ke_range=[0,120], ke_step=4, z_step=1, 
+                          calc_mom=True, vmax=None)
+#    extract2 = extract_m1("data_small/100ek_small__-15_-10.pickle",
+#                          ke_range=[0,80], 
+#                          ke_step=4, z_step=1, calc_mom=True, vmax=None)
 
     # displaying results as heatmap
 #    a = extract.show_hmap()

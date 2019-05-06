@@ -46,7 +46,8 @@ class extract_m1:
         self.ke = self.data[0]
         self.dx = self.data[1]
         self.z = self.data[2]
-        self.sim_cnt = self.data[3]
+        self.recoil_index = self.data[3]
+        self.sim_cnt = self.data[4]
         print("Total number of simulations: {}".format(self.sim_cnt))
 
     def calc_vmatrix(self):
@@ -147,7 +148,7 @@ class extract_m1:
             print 'm1=', m1_sum
 
         ax1.legend(loc='best')
-        
+
         if saveimg is not None:
             plt.savefig(saveimg)
         else:
@@ -159,10 +160,10 @@ if __name__ == '__main__':
     # range of kinetic energy (0, 20> with 1 step [eV]
     # range of depth (-80, -10> with step 10
 #    "data_30cut/100ek_90deg_cut__-5_0.pickle"
-    extract = extract_m1("data/100ek_90deg__-15_-10.pickle", ke_range=[0,80], 
+    extract = extract_m1("data/100ek_90deg__-15_-10.pickle", ke_range=[0,80],
                          ke_step=4, z_step=1, calc_mom=True, vmax=None)
     extract2 = extract_m1("data_relax/100ek_relax__-15_-10.pickle",
-                          ke_range=[0,80], 
+                          ke_range=[0,80],
                           ke_step=4, z_step=1, calc_mom=True, vmax=None)
 
     # displaying results as heatmap

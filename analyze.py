@@ -46,7 +46,8 @@ class extract_m1:
         self.ke = self.data[0]
         self.dx = self.data[1]
         self.z = self.data[2]
-        self.sim_cnt = self.data[3]
+        self.recoil_index = self.data[3]
+        self.sim_cnt = self.data[4]
         print("Total number of simulations: {}".format(self.sim_cnt))
         
     def calc_vmatrix(self):
@@ -147,7 +148,7 @@ class extract_m1:
             print 'm1=', m1_sum
 
         ax1.legend(loc='best')
-        
+
         if saveimg is not None:
             plt.savefig(saveimg)
         else:

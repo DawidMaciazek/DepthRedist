@@ -47,7 +47,11 @@ class extract_m1:
         self.dx = self.data[1]
         self.z = self.data[2]
         self.recoil_index = self.data[3]
-        self.sim_cnt = self.data[4]
+        try:
+           self.sim_cnt = self.data[4]
+        except IndexError:
+           self.recoil_index = None
+           self.sim_cnt = self.data[3]
         print("Total number of simulations: {}".format(self.sim_cnt))
         
     def calc_vmatrix(self):
@@ -161,10 +165,10 @@ if __name__ == '__main__':
     # range of depth (-80, -10> with step 10
 #    "data_30cut/100ek_90deg_cut__-5_0.pickle"
 #    extract = extract_m1("data_relax/100ek_relax__-15_-10.pickle", ke_range=[0,80], 
-    extract = extract_m1("data/100ek_90deg__-15_-10.pickle", 
+    extract = extract_m1("data_comparison_time/100ek__-15_-10_UP_4500.pickle", 
                          ke_range=[0,120], ke_step=4, z_step=1, 
                          calc_mom=True, vmax=None)
-    extract2 = extract_m1("data_relax/100ek_relax__-15_-10.pickle", 
+    extract2 = extract_m1("data_comparison_time/100ek__-15_-10_UP_3000.pickle", 
                           ke_range=[0,120], ke_step=4, z_step=1, 
                           calc_mom=True, vmax=None)
 #    extract2 = extract_m1("data_small/100ek_small__-15_-10.pickle",

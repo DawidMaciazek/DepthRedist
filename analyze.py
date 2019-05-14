@@ -1,7 +1,12 @@
 import sys
+import glob
 import pickle
 import numpy as np
+from scipy import interpolate
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.rcParams['errorbar.capsize'] = 3
+
 
 class extract_m1:
     def __init__(self, pfile, ke_range=[0,100], ke_step=1, z_range=None,
@@ -39,6 +44,7 @@ class extract_m1:
         self.vmax = vmax
 
     def load(self, pfile):
+        """Load the data from file pfile."""
         with open(pfile, 'rb') as f:
             # [ ke, dx, z ]
             self.data = pickle.load(f)
@@ -48,13 +54,18 @@ class extract_m1:
         self.z = self.data[2]
         self.recoil_index = self.data[3]
         try:
-           self.sim_cnt = self.data[4]
+            self.sim_cnt = self.data[4]
+            print("n={}/{} ({})".format(self.sim_cnt,
+                                        len(set(self.recoil_index)), pfile))
         except IndexError:
-           self.recoil_index = None
-           self.sim_cnt = self.data[3]
-        print("Total number of simulations: {}".format(self.sim_cnt))
+            self.recoil_index = None
+            self.sim_cnt = self.data[3]
+            print("n={} ({})".format(self.sim_cnt, pfile))
+        print("dx_min={:.2f}, dx_max={:.2f}".format(self.dx.min(),
+                                                    self.dx.max()))
         
     def calc_vmatrix(self):
+        """Calculate a 2d histogram over recoil depth and energy."""
         m1_val_ext = np.zeros((len(self.z_bin_centers),
                                len(self.ke_bin_centers)), dtype=float)
         m1_cnt_ext = m1_val_ext.copy()
@@ -80,8 +91,10 @@ class extract_m1:
 
         return m1_val, row_labels, column_labels
 
-    def show_hmap(self, saveimg=None):
+    def show_hmap(self, z1=None, z2=None, saveimg=None):
+        """Show the 2d histogram as a heat map."""
         m1_val, row_labels, column_labels = self.calc_vmatrix()
+        print column_labels
 
         fig, ax1 = plt.subplots(1,1)
         fig.suptitle("File: {} , num of simulations: {}".format(
@@ -113,16 +126,46 @@ class extract_m1:
         else:
             cbar.set_label("Average displacement x-axis [A]")
 
+        f = interpolate.interp1d(column_labels, np.arange(len(column_labels)))
+        if column_labels[0] > 0 and column_labels[-1] < 0:
+            ax1.axhline(y=f(0), color='white', linewidth=1)
+        if z1 is not None:
+            ax1.axhline(y=f(z1), color='white', linewidth=1, linestyle='--')
+        if z2 is not None:
+            ax1.axhline(y=f(z2), color='white', linewidth=1, linestyle='--')
+
         if saveimg is not None:
             plt.savefig(saveimg)
         else:
             plt.show()
 
-    def show_1d_distrib(self, compareto=None, saveimg=None):
-        if not self.calc_mom:
-            sys.exit("Cannot construct histogram of average displacement.")
+    def calc_m1_distrib(self):
+        """Calculate a histogram of m1 values per primary recoil,
+        its mean value, and the standard deviation of the mean value."""
+        m1_dict = {}
+        for dx, recoil_index in zip(self.dx, self.recoil_index):
+            if recoil_index in m1_dict:
+                m1_dict[recoil_index] += dx
+            else:
+                m1_dict[recoil_index] = dx
+                
+        m1 = np.mean(m1_dict.values())
+        m1_err = np.std(m1_dict.values()) / np.sqrt(len(m1_dict))
+        
+        return m1_dict, m1, m1_err
+
+    def calc_1d_distrib(self):
+        """Calculate the 1d histogram over energy."""
         m1_val, row_labels, column_labels = self.calc_vmatrix()
         m1_val = np.sum(m1_val, axis=0)
+        
+        return m1_val, row_labels    
+
+    def show_1d_distrib(self, compareto=None, saveimg=None):
+        """Show the 1d histogram and optionally compare to second histogram."""
+        if not self.calc_mom:
+            sys.exit("Cannot construct histogram of average displacement.")
+        m1_val, labels = self.calc_1d_distrib()
         m1_sum = np.sum(m1_val)
         print 'm1=', m1_sum
 
@@ -130,7 +173,7 @@ class extract_m1:
         label = "{} (M1={:.1f})".format(self.file_name, m1_sum)
         ax1.plot(m1_val, label=label)
 
-        row_map_dict = dict(zip(range(len(row_labels)), row_labels))
+        row_map_dict = dict(zip(range(len(labels)), labels))
         def row_mapper(val, n):
             val = int(val)
             if val in row_map_dict:
@@ -144,8 +187,7 @@ class extract_m1:
 
         # compare to other data
         if compareto is not None:
-            m1_val, row_labels, column_labels = compareto.calc_vmatrix()
-            m1_val = np.sum(m1_val, axis=0)
+            m1_val, labels = compareto.calc_1d_distrib()
             m1_sum = np.sum(m1_val)
             label = "{} (M1={:.1f})".format(compareto.file_name, m1_sum)
             ax1.plot(m1_val, '--', label=label)
@@ -158,27 +200,106 @@ class extract_m1:
         else:
             plt.show()
 
+def show_hmap(fname, z1, z2):
+    """Show the 2d histogram over recoil depth and energy as a heat map
+    for one data set."""
+    extract = extract_m1(fname, 
+                         ke_range=[0,96], ke_step=4, z_step=1, 
+                         calc_mom=True, vmax=None)
+    extract.show_hmap(z1, z2)
 
-if __name__ == '__main__':
-    # initializing class for analyzing with following bin parameters:
-    # range of kinetic energy (0, 20> with 1 step [eV]
-    # range of depth (-80, -10> with step 10
-#    "data_30cut/100ek_90deg_cut__-5_0.pickle"
-#    extract = extract_m1("data_relax/100ek_relax__-15_-10.pickle", ke_range=[0,80], 
-    extract = extract_m1("data_comparison_time/100ek__-15_-10_UP_4500.pickle", 
+
+def show_1d_distrib(fname1, fname2=None):
+    """Show the 1d histogram over recoil energy for one or two data sets."""
+    extract = extract_m1(fname1, 
                          ke_range=[0,120], ke_step=4, z_step=1, 
                          calc_mom=True, vmax=None)
-    extract2 = extract_m1("data_comparison_time/100ek__-15_-10_UP_3000.pickle", 
-                          ke_range=[0,120], ke_step=4, z_step=1, 
-                          calc_mom=True, vmax=None)
-#    extract2 = extract_m1("data_small/100ek_small__-15_-10.pickle",
-#                          ke_range=[0,80], 
-#                          ke_step=4, z_step=1, calc_mom=True, vmax=None)
-
-    # displaying results as heatmap
-#    a = extract.show_hmap()
+    if fname2 is None:
+        extract2 = None
+    else:
+        extract2 = extract_m1(fname2, 
+                              ke_range=[0,120], ke_step=4, z_step=1, 
+                              calc_mom=True, vmax=None)
     extract.show_1d_distrib(extract2)
 
-    # getting results as matrix for proper analyze
-    #m1_matrix, row_labels, column_labels = extract.calc_vmatrix()
 
+def show_m1_vs_z(*fpatterns):
+    """Show m1 as a function of depth using files adhering to fpattern.
+    fpattern must be of the form prefix*_*suffix, where the '*' represent
+    the depth limits."""
+    for fpattern in fpatterns:
+        fnames = glob.glob(fpattern)
+        prefix, suffix = fpattern.split('*_*')
+        z = []
+        m1 = []
+        m1_err = []
+        for fname in fnames:
+            zz = fname.replace(prefix, '', 1).replace(suffix, '')
+            try:
+                z1, z2 = zz.split('_')
+                z1 = float(z1)
+                z2 = float(z2)
+            except ValueError:
+                continue
+            z.append(0.5 * (z1 + z2))
+            extract = extract_m1(fname,
+                                 ke_range=[0,120], ke_step=4, z_step=1, 
+                                 calc_mom=True, vmax=None)
+            if extract.recoil_index is None: # we cannot use calc_m1_distrib
+                m1_val, _ = extract.calc_1d_distrib()
+                m1.append(np.sum(m1_val))
+            else: # we could also use calc_1d_distrib
+                _, m1_val, m1_val_err = extract.calc_m1_distrib()
+                m1.append(m1_val)
+                m1_err.append(m1_val_err)
+        
+        if len(z) > 3:
+            linestyle='.-'
+        else:
+            linestyle='.'
+        if len(m1) == len(m1_err):
+            z, m1, m1_err = zip(*sorted(zip(z, m1, m1_err)))
+            plt.errorbar(-np.array(z), m1, yerr=m1_err,
+                         fmt=linestyle, label=fpattern)
+        else:
+            z, m1 = zip(*sorted(zip(z, m1)))
+            plt.plot(-np.array(z), m1, linestyle, label=fpattern)
+    plt.ylim(0, extract.vmax)
+    plt.xlabel('Depth (A)')
+    plt.ylabel(r'M$_1$ (A)')
+    plt.legend(loc='best')
+    plt.show()
+
+
+def show_m1_hist(fname):
+    """Show a histogram of m1 values caused by primary recoils."""
+    extract = extract_m1(fname,
+                         ke_range=[0,120], ke_step=4, z_step=1, 
+                         calc_mom=True, vmax=None)
+    if extract.recoil_index is None: # we cannot use calc_m1_distrib
+        sys.exit('Cannot calculate m1 histogram.')
+    m1_dict, m1_mean, m1_mean_err = extract.calc_m1_distrib()
+    plt.hist(m1_dict.values(), 
+             label='mean={:.2f}(+/-{:.2f})'.format(m1_mean, m1_mean_err))
+    plt.xlabel(r'M$_1$ (single recoil cascade)')
+    plt.ylabel('count')
+    plt.legend()
+    plt.title(fname)
+    plt.show()
+
+if __name__ == '__main__':
+
+#    show_1d_distrib("data_comparison_time/100ek__-15_-10_UP_4500.pickle",
+#                    "data_comparison_time/100ek__-15_-10_UP_3000.pickle")
+
+#    show_hmap("data_comparison_time/100ek__-15_-10_DOWN_4500.pickle", -15, -10)
+
+#    show_m1_vs_z('data/100ek_90deg__*_*.pickle',
+#                 'data_30cut/100ek_90deg_cut__*_*.pickle',
+#                 'data_comparison_time/100ek__*_*_NORMAL_4500.pickle',
+#                 'data_comparison_time/100ek__*_*_NORMAL_3000.pickle',
+#                 'data_relax/100ek_relax__*_*.pickle',
+#                 'data_small/100ek_small__*_*.pickle',
+#                 'data_small_NOrelax/100ek_small_NOrelax__*_*.pickle')
+
+    show_m1_hist('data_comparison_time/100ek__-15_-10_UP_4500.pickle')
